@@ -1,0 +1,257 @@
+<?php
+// $Id: mapitourprices.module,v 1.0 2010/23/11 19:28:54 soncco Exp $
+
+ 
+/**
+* Muestra la ayuda y la información del módulo
+* @param path which path of the site we're displaying help
+* @param arg array that holds the current path as would be returned from arg() function
+* @return help text for the path
+*/
+function mapitourprices_help($path, $arg) {
+  $output = '';  
+  switch ($path) {
+    case "admin/help#mapitourprices":
+	case "admin/mapitravel/mapitourprices":
+      $output = '<p>'.  t("Shows prices for Machupicchu Travel's tours based on tokens") .'</p>';
+      break;
+	case "node/add/story":
+	case "node/add/tour":
+	case "node/add/tours":
+	case "node/add/hotel":
+	case "node/add/hotels":
+      $output = '<p>'.  t("To show 'vallesagrado' prices, write [mapitravel:vallesagrado] on body.") .'</p>';
+      break;
+  }
+  return $output;
+} // function mapitourprices_help
+
+/**
+* Permisos
+* @return array An array of valid permissions for the mapitourprices module
+*/
+function mapitourprices_permission() {
+  return array('administer mapitourprices' => array(
+      'title' => t('Administer tokens for Prices'),
+   ));
+} // function mapitourprices_perm()
+
+/**
+* Muestra el menú y llama al Admin
+* @return array 
+*/
+function mapitourprices_menu() {
+
+  $items = array();
+  
+  $items['admin/mapitravel'] = array(
+    'title' => 'Machupicchu',
+    'description' => 'All modules for Machupicchu Travel',
+    'position' => 'right',
+    'weight' => 0,
+    'access arguments' => array('access administration pages'),
+  );
+
+  $items['admin/mapitravel/mapitourprices'] = array(
+    'title' => 'Machupicchu Tour Prices',
+    'description' => 'Config values for Machupicchu Tour Prices',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mapitourprices_admin'),
+    'access arguments' => array('access administration pages'),
+   );
+  
+  return $items;
+} // function mapitourprices_menu()
+
+/**
+* Página de Administración de Machupicchu Tour Prices
+* @return array El Formulario
+*/
+function mapitourprices_admin() {
+  $form = array();
+
+  $form['mapitourprices_url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Path for prices'),
+    '#size' => 70,
+	'#default_value' => variable_get('mapitourprices_url', 'http://media.perunoticias.net/html/prices/tours/'),
+    '#maxlength' => 150,
+    '#description' => t("The URL must be content / final. eg. http://foo.com/."),
+    '#required' => TRUE,
+  );
+  
+    
+  $form['mapitourprices_tokens'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Tokens'),
+	'#default_value' => variable_get('mapitourprices_tokens'),
+    '#description' => t("Introduce tokens without [], one per line."),
+    '#required' => TRUE,
+	'#resizable' => TRUE,
+  );
+  
+  $form['mapitourprices_check'] = array(
+    '#type' => 'button',
+    '#value' => t('Clear cache'),
+	'#weight' => 15,
+	'#executes_submit_callback' => TRUE,
+	'#submit' => array('mapitourprices_clear_cache'),
+  );
+  
+  $form = system_settings_form($form);
+  
+  $form['#submit'][] = 'mapitourprices_redo';
+   
+  return $form;
+} // function mapitourprices_admin()
+
+function mapitourprices_redo() {
+	mapitourprices_clear_cache(false);
+	mapitourprices_get_files();
+}
+
+function mapitourprices_get_files() {
+	
+	global $language;
+	$prefix = $language->language;
+	
+	$defaultTokens = variable_get('mapitourprices_tokens');
+	$defaultTokens = explode("\n", $defaultTokens);
+	
+	$url = variable_get('mapitourprices_url', 'http://media.perunoticias.net/html/prices/tours/');
+	$cacheDir = drupal_get_path('module', 'mapitourprices') . "/cache/";
+	
+	foreach ($defaultTokens as $token) {
+		if(!file_exists($cacheDir . trim($token) . ".html")) {
+			$data = @file_get_contents($url . $prefix . "/" . trim($token) . ".html");
+			$fh = fopen($cacheDir . trim($token) . ".html", 'w') or die("oops");
+			fwrite($fh, $data);
+			fclose($fh);
+		}
+	}
+}
+
+/**
+ * Implementation of hook_token_info().
+ */
+function mapitourprices_token_info() {
+	
+  $types = array();
+  $mapitravel = array();
+  
+  $types['mapitravel'] = array(
+    'name' => t("Machupicchu Tokens"),
+    'description' => t("Tokens for Machupicchu Travel."),
+  );
+  
+  $default_tokens = variable_get('mapitourprices_tokens');
+  $default_tokens = explode("\n", $default_tokens);
+  
+ 
+  foreach($default_tokens as $k => $token) {
+	  $mapitravel[$token] = array(
+			'name' => 'Tour ' . $token,
+			'description' => t('Payment information for ') . $token
+	  );
+  }
+  
+  return array(
+    'types' => $types,
+    'tokens' => array(
+      'mapitravel' => $mapitravel,
+    ),
+  );
+}
+
+/**
+ * Implements hook_tokens().
+ */
+function mapitourprices_tokens($type, $tokens, array $data = array(), array $options = array()) {
+  
+  $cacheDir = drupal_get_path('module', 'mapitourprices') . "/cache/";
+  
+  $replacements = array();
+  
+  if ($type == 'mapitravel') {
+    foreach ($tokens as $name => $original) {
+		$replacements[$original] = 	file_get_contents($cacheDir . trim($name) . ".html");
+    }
+  }
+  
+  return $replacements;
+}
+
+function mapitourprices_clear_cache ($message = true) {
+	$cacheDir = drupal_get_path('module', 'mapitourprices') . "/cache";
+	$error = false;
+	
+	if(!$dh = @opendir($cacheDir)) {
+		$error = true;
+		return;
+	}
+	
+    while (false !== ($obj = readdir($dh))) {
+        if($obj=='.' || $obj=='..') continue;
+        if(!@unlink($cacheDir.'/'.$obj)) $error = true;;
+    }
+	
+    closedir($dh);
+	
+	if($message) {
+	
+		if(!$error) {
+			drupal_set_message(t('The cache dir has been emptied.'));
+		} else {
+			drupal_set_message(t('Error on clearing.'), 'error');
+		}
+
+	}
+}
+
+function file_get_contents_curl($url) {
+	$ch = curl_init();
+ 
+	curl_setopt($ch, CURLOPT_HEADER, 0);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_URL, $url);
+ 
+	$data = curl_exec($ch);
+	curl_close($ch);
+ 
+	return $data;
+}
+
+
+
+
+/**
+ * Implementation of hook_token_values().
+ */
+ /*
+function mapitourprices_token_values($type, $object = NULL) {
+  global $language;
+  
+  $values = array();
+  $prefix = $language->language;
+  $defaultTokens = variable_get('mapitourprices_tokens', '');
+  $defaultTokens = explode("\n", $defaultTokens);
+  
+  $url = variable_get('mapitourprices_url', 'http://media.perunoticias.net/html/prices/tours/');
+  $cacheDir = drupal_get_path('module', 'mapitourprices') . "/cache/";
+  
+  switch ($type) {
+    case 'node':
+	  foreach ($defaultTokens as $token) {
+		  if(!file_exists($cacheDir . trim($token) . ".html")) {
+			  $data = file_get_contents_curl($url . $prefix . "/" . trim($token) . ".html");
+			  $fh = fopen($cacheDir . trim($token) . ".html", 'w') or die("oops");
+			  fwrite($fh, $data);
+			  fclose($fh);
+		  }		  
+		  $values[trim($token)] = file_get_contents($cacheDir . trim($token) . ".html");
+	  }
+      break;
+  }
+  return $values;
+}
+*/

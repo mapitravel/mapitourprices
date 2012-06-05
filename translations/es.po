@@ -1,0 +1,69 @@
+# $Id$
+#
+# Spanish translation of Drupal (general)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from files:
+#  mapitourprices.module,v 1.0 2010/23/11 19:28:54 soncco
+#  mapitourprices.info,v 1.0 2010/23/11 19:28:54 soncco
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2010-11-23 19:12-0500\n"
+"PO-Revision-Date: 2010-11-23 19:23-0500\n"
+"Last-Translator: brau <soncco@gmail.com>\n"
+"Language-Team: Spanish <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n!=1);\n"
+
+#: mapitourprices.module:16
+msgid "Shows prices for Machupicchu Travel's tours based on tokens"
+msgstr "Muestra precios para Machupicchu Travel basados en tokens"
+
+#: mapitourprices.module:23
+msgid "To show 'vallesagrado' prices, write [token node vallesagrado] on body."
+msgstr "Para mostrar precios de 'vallesagrado', escribe [token node vallesagrado] en el cuerpo del contenido."
+
+#: mapitourprices.module:46
+msgid "Path for prices"
+msgstr "Ruta de los precios"
+
+#: mapitourprices.module:50
+msgid "The URL must be content / final. eg. http://foo.com/."
+msgstr "El URL debe tener el / final. ejm. http://foo.com/."
+
+#: mapitourprices.module:57
+msgid "Tokens"
+msgstr "Tokens"
+
+#: mapitourprices.module:59
+msgid "Introduce tokens without [], one per line."
+msgstr "Introduce tokens sin los corchetes [], uno por lìnea."
+
+#: mapitourprices.module:66
+msgid "Clear cache"
+msgstr "Limpiar la caché"
+
+#: mapitourprices.module:78
+msgid "You must enter a valid url."
+msgstr "Ingresa una url válida."
+
+#: mapitourprices.module:161;163
+msgid "The cache dir has been emptied."
+msgstr "La cachè ha sido vaciada."
+
+#: mapitourprices.module:34
+msgid "administer mapitourprices"
+msgstr "Administrar Machupicchu Precios"
+
+#: mapitourprices.module:91
+#: mapitourprices.info:0
+msgid "Machupicchu Tour Prices"
+msgstr "Precios para Machupicchu Travel"
+
+#: mapitourprices.module:92
+msgid "Config values for Machupicchu Tour Prices"
+msgstr "Valores de configuración para precios de Machupicchu Travel"
+
