@@ -37,9 +37,8 @@ function mapitourprices_permission() {
 } // function mapitourprices_perm()
 
 /**
-* Muestra el menú y llama al Admin
-* @return array 
-*/
+ * Implementation for hook_menu().
+ */
 function mapitourprices_menu() {
 
   $items = array();
@@ -106,29 +105,70 @@ function mapitourprices_admin() {
 } // function mapitourprices_admin()
 
 function mapitourprices_redo() {
-	mapitourprices_clear_cache(false);
-	mapitourprices_get_files();
+	//mapitourprices_clear_cache(false);
+	mapitourprices_startbatch();
 }
 
-function mapitourprices_get_files() {
-	
-	global $language;
+function mapitourprices_startbatch() {
+  $function = 'mapitourprices_middlebatch';
+  $batch = $function();
+  batch_set($batch);
+}
+
+function mapitourprices_middlebatch() {
+  global $language;
 	$prefix = $language->language;
 	
 	$defaultTokens = variable_get('mapitourprices_tokens');
 	$defaultTokens = explode("\n", $defaultTokens);
 	
-	$url = variable_get('mapitourprices_url', 'http://media.perunoticias.net/html/prices/tours/');
+  $operations = array();
+  
+  foreach ($defaultTokens as $token) {
+    $operations[] = array('mapitourprices_get_file', array($token, t('(Getting @token.html)', array('@token' => $token))));
+  }
+  
+  $batch = array(
+    'operations' => $operations,
+    'finished' => 'mapitourprices_finished',
+  );
+  return $batch;
+}
+
+function mapitourprices_get_file($token, $operation_details, &$context) {
+  global $language;
+	$prefix = $language->language;
+  
+  $url = variable_get('mapitourprices_url', 'http://media.perunoticias.net/html/prices/tours/');
 	$cacheDir = drupal_get_path('module', 'mapitourprices') . "/cache/";
-	
-	foreach ($defaultTokens as $token) {
-		if(!file_exists($cacheDir . trim($token) . ".html")) {
-			$data = @file_get_contents($url . $prefix . "/" . trim($token) . ".html");
-			$fh = fopen($cacheDir . trim($token) . ".html", 'w') or die("oops");
-			fwrite($fh, $data);
-			fclose($fh);
-		}
-	}
+  $token = trim($token);
+  
+  if(!file_exists($cacheDir . $token . ".html")) {
+    $data = file_get_contents($url . $prefix . "/" . $token . ".html");
+    $fh = fopen($cacheDir . $token . ".html", 'w');
+    fwrite($fh, $data);
+    fclose($fh);
+    $context['results']['newfiles'][] = "$token.html";
+  } else {
+    $context['results']['oldfiles'][] = t('@token.html exists', array('@token' => $token));
+  }
+  $context['message'] = t('Loading token "@token"', array('@token' => $token)) . ' ' . $operation_details;
+}
+
+function mapitourprices_finished($success, $results, $operations) {
+  if ($success) {
+    if (isset($results['oldfiles'])) {
+      drupal_set_message(t('@count files already existed and were not updated.', array('@count' => count($results['oldfiles']))));
+    }
+    if (isset($results['newfiles'])) {
+      drupal_set_message(t('@count files has been downloaded.', array('@count' => count($results['newfiles']))));
+      drupal_set_message(t('New Files: @files', array('@files' => implode(' ', $results['newfiles']))));
+    }
+  }
+  else {
+    $error_operation = reset($operations);
+    drupal_set_message(t('An error occurred while processing @operation with arguments : @args', array('@operation' => $error_operation[0], '@args' => print_r($error_operation[0], TRUE))));
+  }
 }
 
 /**
@@ -220,38 +260,3 @@ function file_get_contents_curl($url) {
  
 	return $data;
 }
-
-
-
-
-/**
- * Implementation of hook_token_values().
- */
- /*
-function mapitourprices_token_values($type, $object = NULL) {
-  global $language;
-  
-  $values = array();
-  $prefix = $language->language;
-  $defaultTokens = variable_get('mapitourprices_tokens', '');
-  $defaultTokens = explode("\n", $defaultTokens);
-  
-  $url = variable_get('mapitourprices_url', 'http://media.perunoticias.net/html/prices/tours/');
-  $cacheDir = drupal_get_path('module', 'mapitourprices') . "/cache/";
-  
-  switch ($type) {
-    case 'node':
-	  foreach ($defaultTokens as $token) {
-		  if(!file_exists($cacheDir . trim($token) . ".html")) {
-			  $data = file_get_contents_curl($url . $prefix . "/" . trim($token) . ".html");
-			  $fh = fopen($cacheDir . trim($token) . ".html", 'w') or die("oops");
-			  fwrite($fh, $data);
-			  fclose($fh);
-		  }		  
-		  $values[trim($token)] = file_get_contents($cacheDir . trim($token) . ".html");
-	  }
-      break;
-  }
-  return $values;
-}
-*/

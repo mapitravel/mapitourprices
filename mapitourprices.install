@@ -84,23 +84,7 @@ function mapitourprices_install() {
   $defaultTokens = implode("\n", $tours);
   variable_set('mapitourprices_tokens', $defaultTokens);
   
-	global $language;
-	$prefix = $language->language;
-	
-	$defaultTokens = variable_get('mapitourprices_tokens');
-	$defaultTokens = explode("\n", $defaultTokens);
-	
-	$url = variable_get('mapitourprices_url', 'http://media.perunoticias.net/html/prices/tours/');
-	$cacheDir = drupal_get_path('module', 'mapitourprices') . "/cache/";
-	
-	foreach ($defaultTokens as $token) {
-		if(!file_exists($cacheDir . trim($token) . ".html")) {
-			$data = @file_get_contents_curl($url . $prefix . "/" . trim($token) . ".html");
-			$fh = fopen($cacheDir . trim($token) . ".html", 'w') or die("oops");
-			fwrite($fh, $data);
-			fclose($fh);
-		}
-	}
+	mapitourprices_startbatch();
 
   // Clear the cache to get these to take effect.
   cache_clear_all();
@@ -113,17 +97,15 @@ function mapitourprices_install() {
 function mapitourprices_uninstall() {
 	
 	$cacheDir = drupal_get_path('module', 'mapitourprices') . "/cache";
-	
 	if(!$dh = @opendir($cacheDir)) {
 		return;
-	}
-	
+	}	
 	while (false !== ($obj = readdir($dh))) {
 		if($obj=='.' || $obj=='..') continue;
 		if(!@unlink($cacheDir.'/'.$obj)) $error = true;;
-	}
-	
+	}	
 	closedir($dh);
+  
 	// Delete menu links.
 	menu_cache_clear_all();
 	// Delete variables.
